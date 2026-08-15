@@ -25,7 +25,7 @@ def make_transcript(tmp_path, lines):
     return path
 
 
-def payload_for(transcript, agent_type="frugal:mechanic"):
+def payload_for(transcript, agent_type="frugal-kw:mechanic"):
     return {
         "agent_id": "abc", "agent_type": agent_type,
         "session_id": "s1", "hook_event_name": "SubagentStop",
@@ -50,7 +50,7 @@ def test_sums_usage_and_detects_escalation(tmp_path):
     ])
     metrics = run_hook(tmp_path, payload_for(transcript))
     record = json.loads(metrics.read_text().strip())
-    assert record["agent_type"] == "frugal:mechanic"
+    assert record["agent_type"] == "frugal-kw:mechanic"
     assert record["model"] == "claude-sonnet-5"
     assert record["escalated"] is True
     assert record["input_tokens"] == 150
@@ -67,7 +67,7 @@ def test_no_escalation_marker(tmp_path):
                                "cache_read_input_tokens": 0,
                                "cache_creation_input_tokens": 0}}},
     ])
-    metrics = run_hook(tmp_path, payload_for(transcript, "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(transcript, "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["escalated"] is False
     assert record["model"] == "claude-haiku-4-5"
@@ -102,7 +102,7 @@ def test_duplicate_message_ids_billed_once_at_max(tmp_path):
         {"message": {"role": "assistant", "id": "msg_2",
                      "model": "claude-haiku-4-5", "usage": usage(20)}},
     ])
-    metrics = run_hook(tmp_path, payload_for(transcript, "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(transcript, "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["input_tokens"] == 200
     assert record["output_tokens"] == 40
@@ -132,7 +132,7 @@ def test_records_main_loop_model_from_main_transcript(tmp_path):
         {"message": {"role": "assistant", "model": "claude-fable-5",
                      "usage": {"input_tokens": 1, "output_tokens": 1}}},
     ]))
-    payload = payload_for(worker, "frugal:scout")
+    payload = payload_for(worker, "frugal-kw:scout")
     payload["transcript_path"] = str(main_transcript)
     metrics = run_hook(tmp_path, payload)
     record = json.loads(metrics.read_text().strip())
@@ -145,7 +145,7 @@ def test_missing_main_transcript_gives_null_main_model(tmp_path):
         {"message": {"role": "assistant", "model": "claude-haiku-4-5",
                      "usage": {"input_tokens": 10, "output_tokens": 2}}},
     ])
-    metrics = run_hook(tmp_path, payload_for(worker, "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(worker, "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["main_model"] is None
 
@@ -163,7 +163,7 @@ def test_never_crashes_on_garbage(tmp_path):
 
 
 def test_missing_transcript_still_logs(tmp_path):
-    metrics = run_hook(tmp_path, payload_for(tmp_path / "nope.jsonl", "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(tmp_path / "nope.jsonl", "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["model"] is None
     assert record["input_tokens"] == 0
@@ -180,11 +180,11 @@ def test_non_ascii_transcript_still_logged(tmp_path):
         ensure_ascii=False,  # Claude Code writes raw UTF-8, not \uXXXX escapes
     ) + "\n", encoding="utf-8")
     # force a non-UTF-8 default so this reproduces off Windows too
-    metrics = run_hook(tmp_path, payload_for(transcript, "frugal:extractor"),
+    metrics = run_hook(tmp_path, payload_for(transcript, "frugal-kw:extractor"),
                        env={"LC_ALL": "C", "LANG": "C", "PYTHONUTF8": "0",
                             "PYTHONCOERCECLOCALE": "0"})
     record = json.loads(metrics.read_text(encoding="utf-8").strip())
-    assert record["agent_type"] == "frugal:extractor"
+    assert record["agent_type"] == "frugal-kw:extractor"
     assert record["output_tokens"] == 2
 
 
@@ -201,7 +201,7 @@ def test_duration_and_handoff_recorded(tmp_path):
                      "model": "claude-haiku-4-5",
                      "usage": {"input_tokens": 200, "output_tokens": 40}}},
     ])
-    metrics = run_hook(tmp_path, payload_for(transcript, "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(transcript, "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["duration_ms"] == 12500
     # only the final response's output re-enters the main loop
@@ -214,7 +214,7 @@ def test_no_timestamps_gives_null_duration(tmp_path):
         {"message": {"role": "assistant", "model": "claude-haiku-4-5",
                      "usage": {"input_tokens": 10, "output_tokens": 2}}},
     ])
-    metrics = run_hook(tmp_path, payload_for(transcript, "frugal:scout"))
+    metrics = run_hook(tmp_path, payload_for(transcript, "frugal-kw:scout"))
     record = json.loads(metrics.read_text().strip())
     assert record["duration_ms"] is None
     assert record["handoff_output_tokens"] == 2

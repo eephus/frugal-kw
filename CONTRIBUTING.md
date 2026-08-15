@@ -3,7 +3,7 @@
 ## Setup
 
 ```sh
-git clone git@github.com:ThomasLangbroek/frugal.git
+git clone https://github.com/eephus/frugal-kw.git
 cd frugal
 pip install pytest
 pytest tests/ -q

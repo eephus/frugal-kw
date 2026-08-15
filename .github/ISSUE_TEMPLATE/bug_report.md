@@ -11,7 +11,7 @@ labels: bug
 ## Evidence
 
 <!-- For routing bugs: the prompt you gave and which agent (if any) was spawned.
-     For metrics bugs: the relevant lines from ~/.claude/frugal/metrics.jsonl.
+     For metrics bugs: the relevant lines from ~/.claude/frugal-kw/metrics.jsonl.
      For hook bugs: the deny/error message verbatim. -->
 
 ## Environment

@@ -18,7 +18,7 @@ def run_guard(payload, env=None):
     )
 
 
-def spawn(prompt, agent="frugal:extractor"):
+def spawn(prompt, agent="frugal-kw:extractor"):
     return {"tool_name": "Agent",
             "tool_input": {"subagent_type": agent, "prompt": prompt}}
 
@@ -44,9 +44,9 @@ def test_matching_pattern_blocks(tmp_path):
 
 def test_allow_agents_bypasses(tmp_path):
     rule = [{"name": "pii", "patterns": [r"\bNL\d{2}[A-Z]{4}\d{10}\b"],
-             "allow_agents": ["frugal:extractor"]}]
+             "allow_agents": ["frugal-kw:extractor"]}]
     env = write_config(tmp_path, rule)
-    proc = run_guard(spawn("NL12ABCD3456789012", agent="frugal:extractor"), env=env)
+    proc = run_guard(spawn("NL12ABCD3456789012", agent="frugal-kw:extractor"), env=env)
     assert proc.returncode == 0
 
 

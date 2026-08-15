@@ -18,21 +18,21 @@ def run_guard(payload, env=None):
 
 def test_blocks_sage_by_default():
     proc = run_guard({"tool_name": "Agent",
-                      "tool_input": {"subagent_type": "frugal:sage"}})
+                      "tool_input": {"subagent_type": "frugal-kw:sage"}})
     assert proc.returncode == 2
     assert "FRUGAL_ALLOW_EXPENSIVE" in proc.stderr
 
 
 def test_allows_sage_when_flagged():
     proc = run_guard({"tool_name": "Agent",
-                      "tool_input": {"subagent_type": "frugal:sage"}},
+                      "tool_input": {"subagent_type": "frugal-kw:sage"}},
                      env={"FRUGAL_ALLOW_EXPENSIVE": "1"})
     assert proc.returncode == 0
 
 
 def test_allows_cheap_agents():
     proc = run_guard({"tool_name": "Agent",
-                      "tool_input": {"subagent_type": "frugal:scout"}})
+                      "tool_input": {"subagent_type": "frugal-kw:scout"}})
     assert proc.returncode == 0
 
 
@@ -44,7 +44,7 @@ def test_blocks_bare_agent_call():
 
 def test_namespaced_cheap_agents_allowed():
     # regression: these were all denied as 'general-purpose' on Windows
-    for agent in ("frugal:mechanic", "frugal:builder", "frugal:extractor"):
+    for agent in ("frugal-kw:mechanic", "frugal-kw:builder", "frugal-kw:extractor"):
         proc = run_guard({"tool_name": "Agent",
                           "tool_input": {"subagent_type": agent}})
         assert proc.returncode == 0, f"{agent} was blocked: {proc.stderr}"
@@ -56,7 +56,7 @@ def test_missing_interpreter_allows(tmp_path):
     # PATH holds bash and nothing else, so no interpreter resolves.
     (tmp_path / "bash").symlink_to(shutil.which("bash"))
     proc = run_guard({"tool_name": "Agent",
-                      "tool_input": {"subagent_type": "frugal:mechanic"}},
+                      "tool_input": {"subagent_type": "frugal-kw:mechanic"}},
                      env={"PATH": str(tmp_path)})
     assert proc.returncode == 0, proc.stderr
 

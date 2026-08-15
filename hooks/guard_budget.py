@@ -29,7 +29,7 @@ ID_CACHE = 20  # responses whose counted cost is carried between scans
 
 def metrics_path():
     return os.environ.get("FRUGAL_METRICS_PATH") or os.path.expanduser(
-        "~/.claude/frugal/metrics.jsonl")
+        "~/.claude/frugal-kw/metrics.jsonl")
 
 
 def state_path(session_id):
@@ -149,7 +149,7 @@ def main():
         agent = (payload.get("tool_input") or {}).get("subagent_type") or ""
         if agent in EXPENSIVE or agent.split(":")[-1] in EXPENSIVE:
             sys.stderr.write(
-                f"frugal: session spend ${spend:.2f} is over the "
+                f"frugal-kw: session spend ${spend:.2f} is over the "
                 f"${budget:.2f} budget, and '{agent}' costs more than doing "
                 "this in the main loop. Do it inline, or raise "
                 "FRUGAL_BUDGET_USD if the work is worth it.\n")

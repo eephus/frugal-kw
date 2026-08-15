@@ -67,10 +67,10 @@ def test_budget_guard_wired_on_prompt_and_agent():
 
 
 def test_guard_blocks_expensive_agents():
-    for atype in ("Explore", "general-purpose", "claude", "Plan", "sage", "frugal:sage"):
+    for atype in ("Explore", "general-purpose", "claude", "Plan", "sage", "frugal-kw:sage"):
         proc = run_guard({"tool_name": "Agent", "tool_input": {"subagent_type": atype}})
         assert proc.returncode == 2, f"{atype} should be blocked"
-        assert "frugal:scout" in proc.stderr
+        assert "frugal-kw:scout" in proc.stderr
 
 
 def test_guard_blocks_bare_agent_call():
@@ -82,8 +82,8 @@ def test_guard_blocks_bare_agent_call():
 
 def test_guard_allows_cheap_and_specialised_agents():
     # exact "claude" is blocked, but "claude-code-guide" (substring) must not be
-    for atype in ("frugal:scout", "frugal:extractor", "frugal:mechanic",
-                  "frugal:builder", "fast-explorer", "claude-code-guide"):
+    for atype in ("frugal-kw:scout", "frugal-kw:extractor", "frugal-kw:mechanic",
+                  "frugal-kw:builder", "fast-explorer", "claude-code-guide"):
         proc = run_guard({"tool_name": "Agent", "tool_input": {"subagent_type": atype}})
         assert proc.returncode == 0, f"{atype} should be allowed"
 

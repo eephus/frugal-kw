@@ -1,9 +1,9 @@
 {
-  "name": "frugal-marketplace",
-  "owner": { "name": "Thomas Langbroek" },
+  "name": "frugal-kw-marketplace",
+  "owner": { "name": "Kyle Wickliffe" },
   "plugins": [
     {
-      "name": "frugal",
+      "name": "frugal-kw",
       "source": "./",
       "description": "Cost-optimised agent router for Claude Code."
     }

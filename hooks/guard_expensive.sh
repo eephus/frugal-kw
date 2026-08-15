@@ -31,7 +31,7 @@ print((payload.get("tool_input") or {}).get("subagent_type", ""))
 
 case "$agent_type" in
   general-purpose|Explore|Plan|claude|sage|*:sage)
-    echo "frugal: blocked reasoning-tier agent '$agent_type'. Route locate/map -> frugal:scout, extract/summarise/classify -> frugal:extractor, mechanical edits -> frugal:mechanic or frugal:builder. If the task genuinely needs main-loop breadth, set FRUGAL_ALLOW_EXPENSIVE=1 to allow this session." >&2
+    echo "frugal-kw: blocked reasoning-tier agent '$agent_type'. Route locate/map -> frugal-kw:scout, extract/summarise/classify -> frugal-kw:extractor, mechanical edits -> frugal-kw:mechanic or frugal-kw:builder. If the task genuinely needs main-loop breadth, set FRUGAL_ALLOW_EXPENSIVE=1 to allow this session." >&2
     exit 2
     ;;
 esac

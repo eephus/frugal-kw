@@ -1,20 +1,22 @@
-# frugal
+# frugal-kw
 
-[![ci](https://github.com/ThomasLangbroek/frugal/actions/workflows/ci.yml/badge.svg)](https://github.com/ThomasLangbroek/frugal/actions/workflows/ci.yml)
+[![ci](https://github.com/eephus/frugal-kw/actions/workflows/ci.yml/badge.svg)](https://github.com/eephus/frugal-kw/actions/workflows/ci.yml)
+
+A fork of [ThomasLangbroek/frugal](https://github.com/ThomasLangbroek/frugal) — adds per-main-loop-tier profiles, runner/reviewer worker agents, optimistic down-routing, and tier-mix reporting.
 
 A cost-optimised agent router for [Claude Code](https://code.claude.com). Frugal teaches the main loop to send every sub-task to the cheapest execution strategy that can succeed, and to escalate only on verified failure:
 
 ```
-deterministic tool → haiku worker → sonnet worker → main model → fable (escalation ceiling)
+deterministic tool → haiku worker → sonnet worker → main model → sage (Opus by default; Fable as opt-in ceiling)
 ```
 
-The expensive reasoning model plans and judges; commodity work (locating files, extracting data, mechanical edits) runs on cheap tiers. No framework, no runtime, no API keys: frugal is a plugin made of a routing skill, five agent definitions, and two small hooks. The harness does the rest.
+The expensive reasoning model plans and judges; commodity work (locating files, extracting data, mechanical edits) runs on cheap tiers. No framework, no runtime, no API keys: frugal is a plugin made of a routing skill, seven agent definitions, and a handful of small hooks. The harness does the rest.
 
 ## Install
 
 ```
-/plugin marketplace add ThomasLangbroek/frugal
-/plugin install frugal@frugal-marketplace
+/plugin marketplace add eephus/frugal-kw
+/plugin install frugal-kw@frugal-kw-marketplace
 ```
 
 ## How it works
@@ -25,12 +27,29 @@ The main model already reads every request, so it acts as the router at zero mar
 |---|---|---|
 | locate, grep, map structure, find usages | `scout` | Haiku |
 | extract, classify, summarise one source | `extractor` | Haiku |
+| run tests/builds/commands with noisy output, report results | `runner` | Haiku |
 | mechanical edits from a complete spec | `mechanic` | Sonnet |
 | implement one scoped task from an approved plan | `builder` | Sonnet |
-| design, debugging, ambiguity, risk | main loop | whatever you run |
-| beyond the main loop's tier, or isolated deep reviews | `sage` | Fable |
+| first-pass review of a diff or file, findings only | `reviewer` | Sonnet |
+| design, root-cause debugging, ambiguity, risk, adjudication | main loop | whatever you run |
+| beyond the main loop's tier, or isolated deep reviews | `sage` | Opus (Fable via profile) |
 
 Plus a tool-first rule: if grep, jq, git, terraform or any deterministic command solves the task, no model is called at all.
+
+### Recommended profiles per main-loop tier
+
+The right worker tiers depend on what the main loop itself runs. Frugal ships three profiles as ready-made override files (August 2026 pricing: Haiku $1/$5, Sonnet $3/$15, Opus $5/$25, Fable $10/$50 per MTok in/out):
+
+| Agent | Fable main | Opus main | Sonnet main |
+|---|---|---|---|
+| `scout`, `extractor`, `runner` | Haiku | Haiku | Haiku |
+| `mechanic` | Sonnet | Sonnet | Haiku |
+| `builder`, `reviewer` | Sonnet | Sonnet | Sonnet |
+| `sage` | Opus | Fable | Opus |
+
+`sage` defaults to Opus everywhere because Opus 5 sits at near-parity with Fable at half the price; only an Opus main loop keeps Fable as a genuine capability ceiling, expected on under ~5% of spawns. A Sonnet main loop drops `mechanic` to Haiku because fully specified mechanical edits are deterministically checkable — start low, escalate on a failed check. Every profile targets **≥30% of spawns on Haiku**; `/frugal-kw:router-stats` reports your actual mix against that target.
+
+Apply one with `/frugal-kw:models apply <fable|opus|sonnet>`, or copy `examples/profiles/<model>-main.md` to `.claude/routing-overrides.md` yourself.
 
 ### Escalation (verification first)
 
@@ -52,13 +71,13 @@ The router then applies four rules:
 
 ## Metrics and the cost report
 
-A `SubagentStop` hook logs one jsonl line per worker run (agent, model, token usage, escalation flag) to `~/.claude/frugal/metrics.jsonl`. Run:
+A `SubagentStop` hook logs one jsonl line per worker run (agent, model, token usage, escalation flag) to `~/.claude/frugal-kw/metrics.jsonl`. Run:
 
 ```
-/frugal:router-stats
+/frugal-kw:router-stats
 ```
 
-to get cost per tier, escalation rate, and estimated savings versus running the same work on your session's actual main-loop model (recorded per run; older records without it are compared against the top tier). Prices live in `scripts/stats.py` (`PRICES`); update them when Anthropic pricing changes. The report also prints a **delegation floor** per agent: a spawn costs roughly the same whether the task is trivial or large, so the report divides your measured net cost per spawn by your main-loop input rate to say how much reading a delegation has to save before it pays for itself. Under that, do it inline. Learning is deliberately offline: read the report, edit the decision table.
+to get cost per tier, tier mix (haiku share of spawns against the `FRUGAL_HAIKU_TARGET` goal), per-agent escalation rates, and estimated savings versus running the same work on your session's actual main-loop model (recorded per run; older records without it are compared against the top tier). Prices live in `scripts/stats.py` (`PRICES`); update them when Anthropic pricing changes. The report also prints a **delegation floor** per agent: a spawn costs roughly the same whether the task is trivial or large, so the report divides your measured net cost per spawn by your main-loop input rate to say how much reading a delegation has to save before it pays for itself. Under that, do it inline. Learning is deliberately offline: read the report, edit the decision table.
 
 ## Enforcement
 
@@ -79,19 +98,22 @@ Judgement lives in prompts; enforcement lives in hooks.
 | `FRUGAL_INLINE_BUDGET` | `5` | Inline search ops allowed per prompt before the guard denies |
 | `FRUGAL_ALLOW_INLINE=1` | unset | Disables the inline-exploration guard for the session |
 | `FRUGAL_ALLOW_EXPENSIVE=1` | unset | Allows `sage` and other reasoning-tier spawns past the expensive-tier guard |
-| `FRUGAL_METRICS_PATH` | `~/.claude/frugal/metrics.jsonl` | Where worker-run metrics are written |
+| `FRUGAL_METRICS_PATH` | `~/.claude/frugal-kw/metrics.jsonl` | Where worker-run metrics are written |
 | `FRUGAL_BUDGET_USD` | unset | Per-session spend ceiling: warns from 80%, stop-and-confirm plus no reasoning-tier spawns at 100% |
-| `/frugal:models` | agent defaults | Per-project model overrides, e.g. `/frugal:models scout=sonnet` |
+| `FRUGAL_HAIKU_TARGET` | `30` | Target haiku share of spawns (%), reported by `/frugal-kw:router-stats` and session-start advice |
+| `/frugal-kw:models apply <profile>` | none | Applies a recommended per-main-loop-tier profile (`fable`, `opus`, `sonnet`) as `.claude/routing-overrides.md` |
+| `/frugal-kw:models` | agent defaults | Per-project model overrides, e.g. `/frugal-kw:models scout=sonnet` |
 | `.claude/routing-overrides.md` | none | Per-project routing rules; read first, always win |
 
-Too aggressive for your taste? `FRUGAL_ALLOW_INLINE=1` in your environment turns the hard guard off while keeping the advisory policy. Want it gone entirely? `/plugin uninstall frugal` — frugal keeps no state outside the metrics file.
+Too aggressive for your taste? `FRUGAL_ALLOW_INLINE=1` in your environment turns the hard guard off while keeping the advisory policy. Want it gone entirely? `/plugin uninstall frugal-kw` — frugal keeps no state outside the metrics file.
 
 ## Configuration
 
 - Defaults are the decision table in `skills/routing/SKILL.md`.
 - Per-project overrides: create `.claude/routing-overrides.md` in your project. The skill reads it first and its rules win.
-- Per-project model mapping: `/frugal:models` shows it, `/frugal:models scout=sonnet builder=opus` changes it, `/frugal:models reset` restores defaults. Overrides live in the project, not the plugin, and survive updates.
-- No Fable access on your plan? `/frugal:models sage=opus`, or edit `agents/sage.md` frontmatter.
+- Per-project model mapping: `/frugal-kw:models` shows it, `/frugal-kw:models scout=sonnet builder=opus` changes it, `/frugal-kw:models reset` restores defaults. Overrides live in the project, not the plugin, and survive updates.
+- Recommended per-main-loop-tier profiles: `/frugal-kw:models apply <fable|opus|sonnet>` (templates in `examples/profiles/`).
+- `sage` runs Opus by default. Want Fable as the escalation ceiling? `/frugal-kw:models sage=fable`, or apply the opus-main profile.
 - Multi-provider: see [docs/litellm-recipe.md](docs/litellm-recipe.md).
 
 ## Statusline segment (optional)
@@ -99,7 +121,7 @@ Too aggressive for your taste? `FRUGAL_ALLOW_INLINE=1` in your environment turns
 Run once:
 
 ```
-/frugal:setup-statusline
+/frugal-kw:setup-statusline
 ```
 
 It adds a `frugal $0.03/$1.20 saved` badge (session/lifetime) to your statusline: it creates a minimal statusline if you have none, or merges the segment into your existing one (with your consent, smallest possible edit). A plugin cannot configure `statusLine` automatically - that field is user-owned - so this one-time command is as close as it gets.
@@ -107,7 +129,7 @@ It adds a `frugal $0.03/$1.20 saved` badge (session/lifetime) to your statusline
 Manual alternative: call `scripts/statusline.py` from your own statusline command, passing the session id from the statusline stdin JSON:
 
 ```bash
-FRUGAL_TXT=$(python3 "$(ls -d ~/.claude/plugins/cache/*/frugal/*/scripts/statusline.py 2>/dev/null | head -1)" \
+FRUGAL_TXT=$(python3 "$(ls -d ~/.claude/plugins/cache/*/frugal-kw/*/scripts/statusline.py 2>/dev/null | head -1)" \
   ${SESSION_ID:+--session "$SESSION_ID"} 2>/dev/null)
 ```
 
@@ -115,15 +137,15 @@ It prints nothing when no metrics exist yet, so your statusline stays clean.
 
 ## Evaluating routing quality
 
-Deliberately no synthetic eval harness: headless scenario evals proved flaky (other plugins' skills win trigger races, model nondeterminism) while measuring little. Evaluate with real usage instead: work normally for a few days, then run `/frugal:router-stats` and read delegation rate, tier mix, and escalation rate. High escalations on one agent means its table row routes too low; near-zero savings means work is not being delegated.
+Deliberately no synthetic eval harness: headless scenario evals proved flaky (other plugins' skills win trigger races, model nondeterminism) while measuring little. Evaluate with real usage instead: work normally for a few days, then run `/frugal-kw:router-stats` and read delegation rate, tier mix, and escalation rate. High escalations on one agent means its table row routes too low; near-zero savings means work is not being delegated.
 
 ## Privacy
 
-Metrics are agent names, model ids, token counts and an escalation flag — one local jsonl line per worker run, written to `~/.claude/frugal/metrics.jsonl`. No prompt content, no file paths from your projects, no telemetry, nothing leaves your machine. Delete the file at any time; the report simply starts over.
+Metrics are agent names, model ids, token counts and an escalation flag — one local jsonl line per worker run, written to `~/.claude/frugal-kw/metrics.jsonl`. No prompt content, no file paths from your projects, no telemetry, nothing leaves your machine. Delete the file at any time; the report simply starts over.
 
 ## For teams
 
-Rollout is two commands per person (see Install) and no workflow change; routing is automatic. Work normally for a week, then review `/frugal:router-stats` together and tune the decision table or `FRUGAL_INLINE_BUDGET` if the guard fires too often or too rarely.
+Rollout is two commands per person (see Install) and no workflow change; routing is automatic. Work normally for a week, then review `/frugal-kw:router-stats` together and tune the decision table or `FRUGAL_INLINE_BUDGET` if the guard fires too often or too rarely.
 
 Be precise about the cost claim when you pitch it internally: in our measurements delegated work costs **~85% less** than the same work on the top-tier model — cents instead of dollars per task. That saving applies to the *delegated* portion of a session, not the whole bill. Design, debugging and review stay on the expensive model on purpose; what frugal removes is paying reasoning rates for grep. Every install measures itself locally, so nobody has to take this README's word for anything.
 

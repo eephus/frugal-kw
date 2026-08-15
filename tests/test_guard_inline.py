@@ -27,7 +27,7 @@ def test_blocks_after_budget():
         assert run_guard(payload("Grep", session)).returncode == 0
     proc = run_guard(payload("Grep", session))
     assert proc.returncode == 2
-    assert "frugal:scout" in proc.stderr
+    assert "frugal-kw:scout" in proc.stderr
 
 
 def test_foreground_agent_resets_budget():
@@ -67,7 +67,7 @@ def test_subagent_calls_never_counted():
     session = uuid.uuid4().hex
     for _ in range(10):
         p = payload("Grep", session)
-        p["agent_type"] = "frugal:scout"
+        p["agent_type"] = "frugal-kw:scout"
         assert run_guard(p).returncode == 0
 
 

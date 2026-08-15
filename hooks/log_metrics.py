@@ -155,7 +155,7 @@ def main():
         **totals,
     }
     path = os.environ.get("FRUGAL_METRICS_PATH") or os.path.expanduser(
-        "~/.claude/frugal/metrics.jsonl"
+        "~/.claude/frugal-kw/metrics.jsonl"
     )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "a") as handle:

@@ -58,7 +58,7 @@ def collect_strings(value, out):
 
 
 def block(msg):
-    print(f"frugal: {msg}", file=sys.stderr)
+    print(f"frugal-kw: {msg}", file=sys.stderr)
     return 2
 
 

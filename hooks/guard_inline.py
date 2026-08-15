@@ -86,9 +86,9 @@ def main():
     if count <= budget:
         return 0
     print(
-        f"frugal: inline search op {count} this prompt exceeds budget of {budget}. "
+        f"frugal-kw: inline search op {count} this prompt exceeds budget of {budget}. "
         "You are exploring inline at main-loop rates. Delegate the remaining "
-        "discovery to frugal:scout (locate) or frugal:extractor (read/summarise) "
+        "discovery to frugal-kw:scout (locate) or frugal-kw:extractor (read/summarise) "
         "in one Agent call; the budget resets when you delegate. "
         "Set FRUGAL_ALLOW_INLINE=1 to disable this guard.",
         file=sys.stderr,
