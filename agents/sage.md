@@ -1,8 +1,8 @@
 ---
 name: sage
-description: Top-tier reasoning, escalation ceiling. Capabilities - deep-reasoning, architecture, debugging, security-analysis, deep-review, final-synthesis. Use ONLY when a task exceeds the main loop's tier, or a Fable-level task needs an isolated fresh context (parallel deep reviews, synthesis over merged summaries). Never a routing default. If the main loop already runs Fable, use sage solely for context isolation.
+description: Top-tier reasoning, escalation ceiling. Capabilities - deep-reasoning, architecture, debugging, security-analysis, deep-review, final-synthesis. Runs Opus 5 by default - near-Fable capability at half the price - for isolated deep reviews and synthesis. Use ONLY when a task exceeds the main loop's tier, or needs an isolated fresh context (parallel deep reviews, synthesis over merged summaries). Never a routing default. For the longest-horizon frontier work, escalate to Fable via override (/frugal-kw:models sage=fable or the opus-main profile).
 tools: Read, Grep, Glob, Bash
-model: fable
+model: opus
 effort: high
 ---
 

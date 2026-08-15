@@ -12,7 +12,7 @@ project's `.claude/routing-overrides.md`, which the routing policy reads first.
 Overrides work because the Agent tool accepts a `model` parameter per spawn - no
 plugin files are ever edited.
 
-Valid agents: `scout`, `extractor`, `mechanic`, `builder`, `sage`.
+Valid agents: `scout`, `extractor`, `mechanic`, `builder`, `runner`, `reviewer`, `sage`.
 Valid models: `haiku`, `sonnet`, `opus`, `fable`.
 
 ## No arguments: show the mapping
@@ -33,7 +33,7 @@ Valid models: `haiku`, `sonnet`, `opus`, `fable`.
    (create the file if missing, keep any unmanaged content above it intact):
 
    ```markdown
-   ## Model overrides (managed by /frugal:models)
+   ## Model overrides (managed by /frugal-kw:models)
 
    | Agent | Model |
    |---|---|
@@ -53,3 +53,24 @@ Valid models: `haiku`, `sonnet`, `opus`, `fable`.
 
 Remove the managed section. If the file is then empty, delete the file.
 Show the default mapping.
+
+## Argument `apply <fable|opus|sonnet>`
+
+Applies a whole-mix recommendation for the given main-loop tier, rather than
+editing individual agent mappings.
+
+1. Reject any value outside `fable`, `opus`, `sonnet` with the valid options,
+   change nothing.
+2. Locate `<plugin-root>/examples/profiles/<name>-main.md` (plugin root is two
+   directories up from this skill's base directory). If it is missing, say so
+   and stop.
+3. If `.claude/routing-overrides.md` does not exist, copy the profile file to
+   `.claude/routing-overrides.md` and confirm with its resulting content.
+4. If `.claude/routing-overrides.md` already exists, do not overwrite it
+   silently: show the user a diff between the existing file and the profile
+   being applied, and ask before replacing it. Only copy the profile over on
+   explicit confirmation.
+5. Profiles are recommendations, not the only valid mapping for that tier -
+   the user can still fine-tune with individual `agent=model` pairs afterward.
+   Mention that `/frugal-kw:router-stats` verifies the resulting model mix
+   against the profile's target.

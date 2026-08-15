@@ -7,7 +7,9 @@ EXPECTED = {
     "extractor": "haiku",
     "mechanic": "sonnet",
     "builder": "sonnet",
-    "sage": "fable",
+    "runner": "haiku",
+    "reviewer": "sonnet",
+    "sage": "opus",
 }
 # model tier is one axis, thinking is another: a session at high effort
 # otherwise makes a haiku scout deliberate over a grep
@@ -16,6 +18,8 @@ EXPECTED_EFFORT = {
     "extractor": "low",
     "mechanic": "low",
     "builder": "medium",
+    "runner": "low",
+    "reviewer": "medium",
     "sage": "high",
 }
 FOOTER_KEYS = ["RESULT:", "CHECKS-RUN:", "UNCERTAINTIES:", "ESCALATE:"]
@@ -56,7 +60,7 @@ def test_all_agents_carry_footer_contract():
 
 
 def test_readonly_agents_cannot_edit():
-    for name in ("scout", "extractor"):
+    for name in ("scout", "extractor", "reviewer"):
         fields, _ = frontmatter(name)
         tools = fields.get("tools", "")
         assert "Edit" not in tools and "Write" not in tools
@@ -65,6 +69,6 @@ def test_readonly_agents_cannot_edit():
 def test_writing_agents_carry_reply_cap():
     # the reply is re-ingested at main-loop rates; cap it on every tier
     # whose output is not already compression-ruled (scout/extractor are)
-    for name in ("mechanic", "builder", "sage"):
+    for name in ("mechanic", "builder", "reviewer", "sage"):
         _, body = frontmatter(name)
         assert "Reply cap:" in body, f"{name}.md missing reply cap"

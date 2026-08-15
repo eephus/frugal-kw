@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'FRUGAL ROUTING ACTIVE — one-shot deterministic tool first, then cheapest capable agent (scout/extractor -> mechanic/builder -> main loop). Bright line: 3+ inline search/list/read operations on one question = you are exploring inline, delegate to scout/extractor instead. Escalate only on verified failure.'"
+            "command": "echo 'FRUGAL ROUTING ACTIVE — one-shot deterministic tool first, then cheapest capable agent (scout/extractor/runner -> mechanic/builder/reviewer -> main loop). Bright line: 3+ inline search/list/read operations on one question = you are exploring inline, delegate to scout/extractor instead. Noisy test/build runs go to runner. Escalate only on verified failure.'"
           },
           {
             "type": "command",

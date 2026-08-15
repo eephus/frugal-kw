@@ -10,9 +10,9 @@ Add the frugal savings badge to the user's statusline. The badge comes from `scr
 
 1. **Locate the segment script.** Find the installed copy:
    ```
-   ls -d ~/.claude/plugins/cache/*/frugal/*/scripts/statusline.py 2>/dev/null | head -1
+   ls -d ~/.claude/plugins/cache/*/frugal-kw/*/scripts/statusline.py 2>/dev/null | head -1
    ```
-   Use the resulting absolute glob pattern (`$HOME/.claude/plugins/cache/<marketplace>/frugal/*/scripts/statusline.py` with a literal `*` for the version directory, resolved via `ls ... | head -1` at runtime) so plugin updates keep working.
+   Use the resulting absolute glob pattern (`$HOME/.claude/plugins/cache/<marketplace>/frugal-kw/*/scripts/statusline.py` with a literal `*` for the version directory, resolved via `ls ... | head -1` at runtime) so plugin updates keep working.
 
 2. **Read `~/.claude/settings.json`** and check the `statusLine` field. Three cases:
 
@@ -28,7 +28,7 @@ Add the frugal savings badge to the user's statusline. The badge comes from `scr
    DIR=$(basename "$(echo "$INPUT" | jq -r '.cwd // "~"' 2>/dev/null)")
    SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
    FRUGAL=""
-   FRUGAL_SCRIPT=$(ls -d "$HOME"/.claude/plugins/cache/*/frugal/*/scripts/statusline.py 2>/dev/null | head -1)
+   FRUGAL_SCRIPT=$(ls -d "$HOME"/.claude/plugins/cache/*/frugal-kw/*/scripts/statusline.py 2>/dev/null | head -1)
    if [ -n "$FRUGAL_SCRIPT" ]; then
      TXT=$(python3 "$FRUGAL_SCRIPT" ${SESSION_ID:+--session "$SESSION_ID"} 2>/dev/null)
      [ -n "$TXT" ] && FRUGAL=" \033[38;5;114m[${TXT}]\033[0m"
@@ -40,7 +40,7 @@ Add the frugal savings badge to the user's statusline. The badge comes from `scr
 
    ```bash
    FRUGAL=""
-   FRUGAL_SCRIPT=$(ls -d "$HOME"/.claude/plugins/cache/*/frugal/*/scripts/statusline.py 2>/dev/null | head -1)
+   FRUGAL_SCRIPT=$(ls -d "$HOME"/.claude/plugins/cache/*/frugal-kw/*/scripts/statusline.py 2>/dev/null | head -1)
    if [ -n "$FRUGAL_SCRIPT" ]; then
      SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
      TXT=$(python3 "$FRUGAL_SCRIPT" ${SESSION_ID:+--session "$SESSION_ID"} 2>/dev/null)
@@ -55,6 +55,6 @@ Add the frugal savings badge to the user's statusline. The badge comes from `scr
    echo '{"session_id":"test","cwd":"'$HOME'","model":{"display_name":"test"}}' | <statusline command>
    ```
 
-4. Tell the user the badge appears after the first frugal worker runs (metrics land in `~/.claude/frugal/metrics.jsonl`), and that the statusline refreshes on its own.
+4. Tell the user the badge appears after the first frugal worker runs (metrics land in `~/.claude/frugal-kw/metrics.jsonl`), and that the statusline refreshes on its own.
 
 Notes: never delete or rewrite unrelated parts of an existing statusline; make the smallest edit that adds the badge. `jq` and `python3` are required; if missing, say so instead of installing anything.
