@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Frugal metrics report: cost per agent tier, escalation rate, savings vs baseline.
 
-Prices are USD per million tokens (verified 27-07-2026). Cache reads bill at
+Prices are USD per million tokens (verified 14-08-2026). Cache reads bill at
 0.1x input, cache writes at 1.25x input (5-minute TTL). Edit PRICES when
 Anthropic pricing changes.
 """
@@ -35,6 +35,22 @@ def price_for(model):
         if needle in (model or ""):
             return price
     return BASELINE[1]
+
+
+def tier_for(model):
+    """Substring-match a model id to a tier name; unmatched models are 'other'."""
+    for needle, _ in PRICES:
+        if needle in (model or ""):
+            return needle
+    return "other"
+
+
+def haiku_target():
+    """Target haiku share of spawns, percent, from FRUGAL_HAIKU_TARGET (default 30)."""
+    try:
+        return int(os.environ.get("FRUGAL_HAIKU_TARGET", "30"))
+    except (TypeError, ValueError):
+        return 30
 
 
 def cost_usd(record, price=None):
@@ -259,6 +275,71 @@ def floor_table(records):
     return "\n".join(lines)
 
 
+def tier_mix_table(records):
+    """Spawn/token/cost breakdown by model tier, plus the haiku-share KPI."""
+    if not records:
+        return ""
+    tiers = defaultdict(lambda: {"spawns": 0, "tokens": 0, "net": 0.0})
+    total_spawns = len(records)
+    total_tokens = 0
+    for record in records:
+        tier = tier_for(record.get("model"))
+        tokens = (record.get("input_tokens", 0) + record.get("output_tokens", 0)
+                  + record.get("cache_read_input_tokens", 0)
+                  + record.get("cache_creation_input_tokens", 0))
+        tiers[tier]["spawns"] += 1
+        tiers[tier]["tokens"] += tokens
+        tiers[tier]["net"] += net_cost(record)
+        total_tokens += tokens
+    order = [needle for needle, _ in PRICES] + ["other"]
+    lines = [
+        "## Tier mix",
+        "",
+        "| Tier | Spawns | % spawns | Tokens | % tokens | Cost |",
+        "|---|---|---|---|---|---|",
+    ]
+    for tier in order:
+        if tier not in tiers:
+            continue
+        t = tiers[tier]
+        spawn_pct = t["spawns"] / total_spawns * 100 if total_spawns else 0.0
+        tok_pct = t["tokens"] / total_tokens * 100 if total_tokens else 0.0
+        lines.append(
+            f"| {tier} | {t['spawns']} | {spawn_pct:.1f}% "
+            f"| {t['tokens']:,} | {tok_pct:.1f}% | ${t['net']:.2f} |"
+        )
+    haiku_spawns = tiers.get("haiku", {"spawns": 0})["spawns"]
+    haiku_pct = haiku_spawns / total_spawns * 100 if total_spawns else 0.0
+    target = haiku_target()
+    lines += [
+        "",
+        f"**haiku share:** {haiku_pct:.0f}% of spawns (target >={target}%)",
+    ]
+    return "\n".join(lines)
+
+
+def escalation_table(records, min_runs=10):
+    """Per-agent escalation rate, for agents with enough runs to be signal."""
+    groups = defaultdict(lambda: {"runs": 0, "escalations": 0})
+    for record in records:
+        group = groups[record.get("agent_type") or "unknown"]
+        group["runs"] += 1
+        group["escalations"] += 1 if record.get("escalated") else 0
+    rows = [(name, g["runs"], g["escalations"], g["escalations"] / g["runs"] * 100)
+            for name, g in groups.items() if g["runs"] >= min_runs]
+    if not rows:
+        return ""
+    lines = [
+        "## Per-agent escalation rates",
+        "",
+        "| Agent | Runs | Escalations | Rate |",
+        "|---|---|---|---|",
+    ]
+    for name, runs, escalations, rate in sorted(rows):
+        lines.append(f"| {name} | {runs} | {escalations} | {rate:.1f}% |")
+    return "\n".join(lines)
+
+
 def advice(records, now=None):
     """Routing feedback: 0-3 one-liners, only when a route is measurably
     miscalibrated over enough recent runs. Silent when healthy, so the
@@ -299,6 +380,29 @@ def advice(records, now=None):
                 f"frugal advice: {name} replies average {avg:,.0f} tokens "
                 "re-ingested per run - its reply cap is not holding; demand "
                 "terser output or pointers to files.")
+    tier_lines = []
+    if recent:
+        haiku_n = sum(1 for r in recent if tier_for(r.get("model")) == "haiku")
+        pct = haiku_n / len(recent) * 100
+        target = haiku_target()
+        if pct < target:
+            tier_lines.append(
+                f"frugal advice: tier mix: haiku {pct:.0f}% of spawns, target "
+                f">={target}% - route noisy runs and summaries down")
+        for name in sorted(groups):
+            runs = groups[name]
+            if len(runs) < 10:
+                continue
+            rate = sum(1 for r in runs if r.get("escalated")) / len(runs)
+            if rate < 0.05:
+                tier_lines.append(
+                    f"frugal advice: {name} escalation {rate:.0%} - delegate "
+                    "to it harder")
+            elif rate > 0.25:
+                tier_lines.append(
+                    f"frugal advice: {name} escalation {rate:.0%} - specs "
+                    "too thin or its row routes too low")
+    lines += tier_lines[:3]
     return "\n".join(lines)
 
 
@@ -306,7 +410,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", default=os.environ.get(
         "FRUGAL_METRICS_PATH",
-        os.path.expanduser("~/.claude/frugal/metrics.jsonl")))
+        os.path.expanduser("~/.claude/frugal-kw/metrics.jsonl")))
     parser.add_argument("--advice", action="store_true",
                         help="print routing feedback lines only (empty when healthy)")
     args = parser.parse_args()
@@ -317,7 +421,8 @@ def main():
             print(text)
         return
     print(report(records))
-    for table in (floor_table(records), session_table(records)):
+    for table in (tier_mix_table(records), escalation_table(records),
+                  floor_table(records), session_table(records)):
         if table:
             print("\n" + table)
 
